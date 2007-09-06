@@ -1,0 +1,10 @@
+
+The "read" thread takes all the existing data. 
+
+
+forward-linked-lists in C. 
+We want the following options: 
+
+
+new_list() : returns a new, empty list
+delete_list() : deletes a list, and all elements within it

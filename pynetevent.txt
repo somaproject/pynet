@@ -1,0 +1,52 @@
+What do we need? 
+
+1. send an event
+2. block until we get an event/src pair
+3. acquire all N events for some period 
+
+
+Now, 1 & 2 are a bit more tricky than we traditionally understand,
+because of the obvious race condition: 
+
+1. send event
+[sleep]
+[response arrives] 
+2. queue up for response
+
+So we need an interface where we say "save up all events with the
+following profile, and I'll consume them"
+
+So we have 
+evntnet.rxSet : a list of (cmd, src) tuples
+
+evntnet.startEventRX():
+   forks a thread to receive events that match
+
+evntnet.getEvents():
+   acquire the mutex
+   walk to the end of the list
+   takes all the events that the RX thread has acquired
+   and passes them back into python
+   will block if there are none
+evntnet.stop() :
+   terminates the RX thread
+
+   
+evntnet.sendEvent()
+
+
+So we start the thread, which takes a pointer to: 
+   the thread-safe linked list of events
+   
+The consumer should take all from tail to head, snip it, and then
+release the mutex.
+
+
+The main RX thread has some invariants (right?):
+    1. on start-up, the pending event list must be empty
+    2. thus, we acquire a pointer to the head item, and append to it
+----------------------------------------------------------------
+Thread safety: 
+
+1. manipulate the current list
+2. 
