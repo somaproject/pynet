@@ -399,10 +399,14 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   memcpy(&buffer[bpos], &e.cmd, 1); 
   bpos += 1; 
   memcpy(&buffer[bpos], &e.src, 1); 
+  bpos += 1; 
 
   for (i = 0; i < 5; i++)
     {
-      memcpy(&buffer[bpos], &e.data[i], sizeof(uint16_t)); 
+      uint16_t nedata, hedata; 
+      hedata = e.data[i]; 
+      nedata = htons(hedata); 
+      memcpy(&buffer[bpos], &nedata, sizeof(uint16_t)); 
       bpos += sizeof(uint16_t); 
     }
   bpos += 12;
@@ -609,9 +613,16 @@ uint32_t getEvents(int sock, char * rxValidLUT,
 	  evt.src = buffer[bpos];
 	  bpos++;
 	  
-	  memcpy(evt.data, &buffer[bpos], (EVENTLEN-1)*sizeof(uint16_t));
-	  bpos += (EVENTLEN-1)*sizeof(uint16_t);
-	  
+	  // we need to be much more careful about extracting out the 
+	  // event data here
+	  int i =0; 
+	  for (i = 0; i < EVENTLEN-1; i++) {
+	    uint16_t nedata, hedata; 
+	    memcpy(&nedata, &buffer[bpos], sizeof(uint16_t)); 
+	    hedata = ntohs(nedata); 
+	    evt.data[i] = hedata; 
+	    bpos += sizeof(uint16_t); 
+	  }
 	  
 	  // now, is this one of ours?
  	  if (rxValidLUT[evt.cmd + evt.src*256] != 0) { 
