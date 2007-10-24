@@ -6,7 +6,7 @@ import numpy
 p = pynetevent.PyNetEvent()
 
 for i in range(255):
-    p.rxSet.append((100, i))
+    p.rxSet.add((100, i))
 
 p.startEventRX()
 time.sleep(1)

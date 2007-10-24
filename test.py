@@ -4,7 +4,7 @@ n = pynetevent.PyNetEvent()
 
 print n.rxSet
 for i in range(255):
-    n.rxSet.append((16, i))
+    n.rxSet.add((16, i))
 
 print n.startEventRX()
 data = []
@@ -18,10 +18,10 @@ print len(data)
 n.stopEventRX()
 
 
-n.rxSet = []
+n.rxSet = set()
 for i in range(255):
-    n.rxSet.append((128, i))
-    n.rxSet.append((129, i))
+    n.rxSet.add((128, i))
+    n.rxSet.add((129, i))
 
 print n.startEventRX()
 data = []

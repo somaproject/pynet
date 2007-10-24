@@ -1,3 +1,30 @@
+---------------------------------------------------------------------
+PyNetEvent
+
+A python interface to the event bus, as a c-based extension module. 
+
+---------------------------------------------------------------------
+
+The goal of this module is to let us send and receive events. This is
+done by configuring an RX mask, and then starting the receive
+interface; then we can send and receive events.
+
+Member variables: 
+rxSet: the list of (cmd, src) tuples we wish to receive
+number: the most recent received event  sequence number
+
+methods: 
+    {"startEventRX", (PyCFunction)PyNetEvent_startEventRX, METH_NOARGS, 
+     "begin rx of event packets"}, 
+    {"stopEventRX", (PyCFunction)PyNetEvent_stopEventRX, METH_NOARGS, 
+     "stop rx of event packets"}, 
+    {"sendEvent", (PyCFunction)PyNetEvent_send, METH_VARARGS, 
+     "send event packet"}, 
+    {"getEvents", (PyCFunction)PyNetEvent_getEvents, METH_NOARGS, 
+     "Get the events"}, 
+
+
+---------------------------------------------------------------------
 What do we need? 
 
 1. send an event

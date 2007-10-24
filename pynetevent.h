@@ -65,9 +65,9 @@ struct NetworkSharedThreadState_t
 typedef struct {
   PyObject_HEAD
   PyObject *rxSet; /* RX set list */ 
+  PyObject *ip; /* Soma device IP address */ 
   int number;
   struct NetworkSharedThreadState_t * pnss; 
-
   pthread_t * pNetworkThread; 
 } PyNetEvent;
 

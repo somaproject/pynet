@@ -29,12 +29,22 @@ PyNetEvent_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     self = (PyNetEvent *)type->tp_alloc(type, 0);
     if (self != NULL) {
 
-	self->rxSet = PyList_New(0); 
+	self->rxSet = PySet_New(0); 
 	if (self->rxSet == NULL)
 	  {
 	    Py_DECREF(self); 
 	    return NULL; 
 	  }
+	
+
+	char * addrstr; 
+	int ok = PyArg_ParseTuple(args, "s", &addrstr); 
+
+	if (!ok) 
+	  return NULL; 
+
+	self->ip = PyString_FromString(addrstr); 
+	
 
 	// now the shared network state
 	self->pnss = malloc(sizeof(struct NetworkSharedThreadState_t)); 
@@ -158,7 +168,6 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 
 }
 
-
 static PyObject * 
 PyNetEvent_startEventRX(PyNetEvent* self)
 {
@@ -215,7 +224,11 @@ PyNetEvent_startEventRX(PyNetEvent* self)
 
 PyObject * eventToPyTuple(struct event_t * evt)
 {
-
+  /* Convert from a event_t to a python tuple;
+     
+  simply returning a tuple is just so much easier than a custom
+  class or a numpy recordarray. 
+  */
   
   PyObject * outtuple =  PyTuple_New(2+EVENTLEN-1); 
   uint8_t cmd = (unsigned char)evt->cmd; 
@@ -329,7 +342,7 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   
   struct event_t e; 
   uint8_t addrs[10]; 
-
+  printf("Tuple parsed\n"); 
   int ok = PyArg_ParseTuple(args, "(BBBBBBBBBB)(BBHHHHH)",
 			    &addrs[1], &addrs[0],
 			    &addrs[3], &addrs[2],  
@@ -350,7 +363,9 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   memset(&saServer, sizeof(saServer), 0); 
   saServer.sin_family = AF_INET; 
   saServer.sin_port = htons(EVENTTXPORT);  
-  inet_aton("10.0.0.2", &saServer.sin_addr); 
+  char * ip = PyString_AsString(self->ip); 
+
+  inet_aton(ip, &saServer.sin_addr); 
   // construct nonce
 
   
@@ -392,8 +407,8 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
     }
   bpos += 12;
   
-// single event
-  //printf("sending event\n"); 
+  // single event
+  printf("sending event\n"); 
   sendto(sock, buffer, bpos, 0, 
 	 (struct sockaddr*)&saServer, sizeof(saServer)); 
 
@@ -414,11 +429,14 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
  
 }
 
+
 static PyMemberDef PyNetEvent_members[] = {
     {"rxSet", T_OBJECT_EX, offsetof(PyNetEvent, rxSet), 0, 
-     "receive set of tuples"}, 
+     "receive set of (cmd, src) tuples"}, 
     {"number", T_INT, offsetof(PyNetEvent, number), 0,
      "pynetevent number"},
+    {"somaIP", T_OBJECT_EX, offsetof(PyNetEvent, ip), 0, 
+     "soma device IP address"}, 
     {NULL}  /* Sentinel */
 };
 
@@ -431,7 +449,8 @@ static PyMethodDef PyNetEvent_methods[] = {
     {"sendEvent", (PyCFunction)PyNetEvent_send, METH_VARARGS, 
      "send event packet"}, 
     {"getEvents", (PyCFunction)PyNetEvent_getEvents, METH_NOARGS, 
-     "Get the events"}, 
+     "Get the events, as "
+     "a list of (cmd, src, data1, data2, data3, data4, data5)"}, 
     {NULL}  /* Sentinel */
 };
 
@@ -481,7 +500,7 @@ static PyMethodDef module_methods[] = {
     {NULL}  /* Sentinel */
 };
 
-#ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
+#ifndef PyMODINIT_FUNC	/* declarations for DLL importexport */
 #define PyMODINIT_FUNC void
 #endif
 
@@ -495,6 +514,7 @@ initpynetevent(void)
 
     m = Py_InitModule3("pynetevent", module_methods,
                        "Example module that creates an extension type.");
+
 
     if (m == NULL)
       return;
