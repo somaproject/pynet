@@ -1,0 +1,9 @@
+Soma network event interface via python
+
+import soma.networkevent
+import soma.eaddrs
+import soma.Event
+
+pne = soma.pyNetEvent()
+
+
