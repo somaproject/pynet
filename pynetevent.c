@@ -367,7 +367,6 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
 
   inet_aton(ip, &saServer.sin_addr); 
   // construct nonce
-
   
   char buffer[1500]; 
   bzero(buffer, 1500); 

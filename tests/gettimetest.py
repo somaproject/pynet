@@ -18,7 +18,7 @@ print "now going to get 10"
 # we expect to get 10
 data = []
 numrec = 0
-while (numrec < 10):
+while (numrec < 100):
     rxdata = p.getEvents()
     data.extend(rxdata)
     numrec += len(rxdata)
