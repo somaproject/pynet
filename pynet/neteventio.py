@@ -72,7 +72,9 @@ class NetEventIO(object):
 
     def getEvents(self):
         eventout = []
-        for et in self.pne.getEvents():
+        events =  self.pne.getEvents()
+        print "neteventio.getEvents:", events
+        for et in events:
             e = Event()
             e.loadTuple(et)
             eventout.append(e)

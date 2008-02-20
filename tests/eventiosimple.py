@@ -2,9 +2,9 @@
 import sys
 sys.path.append("../")
 
-from event import Event
-import eaddr
-from neteventio import NetEventIO
+from somapynet.event import Event
+from somapynet import eaddr
+from somapynet.neteventio import NetEventIO
 
 eio = NetEventIO("10.0.0.2")
 
@@ -25,4 +25,4 @@ print erx[0]
 
 
 eio.stop()
-h
+

@@ -127,8 +127,7 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
       // check for sequential RX
       if (prevseq + 1 == rxseq ) {
 	// good
-	
-	
+		
 	pthread_mutex_lock(&(pel->size_mutex)); 	
 	  
 	pthread_mutex_lock(&(pel->mutex));
@@ -159,7 +158,9 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	pthread_mutex_unlock(&(pel->size_mutex)); 	  
 	
       } else {
-	printf("Oops, we dropped one, \n");
+	
+	printf("Oops, we dropped one, prevseq = %d, rxseq = %d \n", prevseq, rxseq);
+
       }
       prevseq = rxseq; 
     }
@@ -410,15 +411,15 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   bpos += 12;
   
   // single event
-  uint16_t failure = 1; 
-  while (failure) {
+  //  uint16_t failure = 1; 
+  //  while (failure) {
     sendto(sock, buffer, bpos, 0, 
 	   (struct sockaddr*)&saServer, sizeof(saServer)); 
     
     recv(sock, buffer, 1500, 0); 
     // extract out success/failure data
     uint16_t failure = buffer[2]; 
-
+    /*
   printf("received response %d %d %d %d %d %d %d %d \n",
 	 (int)buffer[0],
 	 (int)buffer[1],
@@ -428,7 +429,7 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
 	 (int)buffer[5],
 	 (int)buffer[6],
 	 (int)buffer[7]);
-  }
+	 }*/
 
   Py_RETURN_NONE;
  
