@@ -342,7 +342,6 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   
   struct event_t e; 
   uint8_t addrs[10]; 
-  printf("Tuple parsed\n"); 
   int ok = PyArg_ParseTuple(args, "(BBBBBBBBBB)(BBHHHHH)",
 			    &addrs[1], &addrs[0],
 			    &addrs[3], &addrs[2],  
@@ -411,22 +410,25 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   bpos += 12;
   
   // single event
-  printf("sending event\n"); 
-  sendto(sock, buffer, bpos, 0, 
-	 (struct sockaddr*)&saServer, sizeof(saServer)); 
+  uint16_t failure = 1; 
+  while (failure) {
+    sendto(sock, buffer, bpos, 0, 
+	   (struct sockaddr*)&saServer, sizeof(saServer)); 
+    
+    recv(sock, buffer, 1500, 0); 
+    // extract out success/failure data
+    uint16_t failure = buffer[2]; 
 
-  recv(sock, buffer, 1500, 0); 
-  // extract out success/failure data
-  //uint16_t success = buffer[2]; 
-/*   printf("received response %d %d %d %d %d %d %d %d \n",  */
-/* 	 (int)buffer[0],  */
-/* 	 (int)buffer[1],  */
-/* 	 (int)buffer[2],  */
-/* 	 (int)buffer[3],  */
-/* 	 (int)buffer[4],  */
-/* 	 (int)buffer[5],  */
-/* 	 (int)buffer[6],  */
-/* 	 (int)buffer[7]);  */
+  printf("received response %d %d %d %d %d %d %d %d \n",
+	 (int)buffer[0],
+	 (int)buffer[1],
+	 (int)buffer[2],
+	 (int)buffer[3],
+	 (int)buffer[4],
+	 (int)buffer[5],
+	 (int)buffer[6],
+	 (int)buffer[7]);
+  }
 
   Py_RETURN_NONE;
  

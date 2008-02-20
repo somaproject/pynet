@@ -1,9 +1,30 @@
-Soma network event interface via python
+Soma network interface via python
 
 import soma.networkevent
 import soma.eaddrs
 import soma.Event
 
-pne = soma.pyNetEvent()
+eio = pynet.NetEventIO(IPaddr)
+eio.addRXMask(src, cmd)
+eio.start()
+
+e = soma.Event()
+e.src = 10
+e.cmd = 20
+e.data[0] = 100
+e.data[1] = 200
+...
+
+
+etx = soma.EventTxDest()
+etx[7] = 4
+eio.sendEvent(etx, e)
+
+and then to receive an event
+
+eio.getEvents()
+Returns a list of event objects
+
+eio.stop()
 
 
