@@ -1,4 +1,4 @@
-import pynetevent
+from somapynet import pynetevent
 import time
 import numpy
 
@@ -18,7 +18,7 @@ print "now going to get 10"
 # we expect to get 10
 data = []
 numrec = 0
-while (numrec < 100):
+while (numrec < 100000):
     rxdata = p.getEvents()
     data.extend(rxdata)
     numrec += len(rxdata)
@@ -35,9 +35,14 @@ for i in data:
 print eventhist
 
 # these should be consecutive
-
+p.stopEventRX()
+oldx = 0
 for e in data:
     d0 = e[2]
     d1 = e[3]
     d2 = e[4]
-    print (d0 << 32 | d1 << 16 | d2)
+    x =  (d0 << 32 | d1 << 16 | d2)
+    if x != oldx + 1:
+        print x
+
+    oldx = x

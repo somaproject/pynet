@@ -88,7 +88,12 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
   struct EventList_t * pel = pnss->pel; 
   
   int socket = setupRXSocket(); 
+  pthread_mutex_lock(&(pnss->running_mutex)); 
+
+  pnss->running  = 1; 
   
+  pthread_mutex_unlock(&(pnss->running_mutex)); 
+    
   
   char firstLoop = 1; 
   uint32_t rxseq, prevseq =0; 
@@ -98,7 +103,7 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
     pthread_mutex_lock(&(pnss->running_mutex)); 
 
     wasrunning = pnss->running ; 
-
+    
     pthread_mutex_unlock(&(pnss->running_mutex)); 
 
     if (wasrunning == 0 ) 
@@ -109,60 +114,69 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
     FD_SET(socket, &readfds); 
     struct timeval timeout; 
     timeout.tv_sec = 0; 
-    timeout.tv_usec = 100000; 
-    int retval = select(socket+1, &readfds, NULL, NULL, &timeout); 
-
-    if(FD_ISSET(socket, &readfds) && retval > 0) {
+    timeout.tv_usec = 000; 
+    int retval = select(socket+1, &readfds, NULL, NULL,  NULL); //&timeout); 
     
-      struct EventList_t newEventList;
-      newEventList.eltHead = NULL;
-      
-      rxseq  = getEvents(socket, pnss->rxValidLUT, &newEventList);
-
-      if (firstLoop) {
-	firstLoop = 0;
-	prevseq = rxseq -1;
-      } 
+    if (retval == -1) { 
+      printf("Error with select\n"); 
+    } else if (retval == 0) {
+      printf("timeout\n"); 
+    } else { // at least one FD
+      if(FD_ISSET(socket, &readfds) && retval > 0) {
 	
-      // check for sequential RX
-      if (prevseq + 1 == rxseq ) {
-	// good
-		
-	pthread_mutex_lock(&(pel->size_mutex)); 	
+	struct EventList_t newEventList;
+	newEventList.eltHead = NULL;
+	
+	rxseq  = getEvents(socket, pnss->rxValidLUT, &newEventList);
+	
+	if (firstLoop) {
+	  firstLoop = 0;
+	  prevseq = rxseq -1;
+	} 
+	
+	// check for sequential RX
+	if (prevseq + 1 == rxseq ) {
+	  // good
 	  
-	pthread_mutex_lock(&(pel->mutex));
-	// if pel is empty, then we append this to it
-	if (pel->eltHead == NULL) {
-	  pel->eltHead = newEventList.eltHead; 
-	  pel->eltTail = newEventList.eltTail; 
-	} else { 
-	  pel->eltTail->elt = newEventList.eltHead; 
-	  pel->eltTail = newEventList.eltTail; 
-	}
-	
-	
-	// check if we added anything; if we did, update size
-	if (newEventList.size > 0) 
-	  {	  
-	    pel->size += newEventList.size; 
-	    //printf("added %d to pel, pel.size = %d\n", newEventList.size, pel->size); 
+	  pthread_mutex_lock(&(pel->size_mutex)); 	
+	  
+	  pthread_mutex_lock(&(pel->mutex));
+	  // if pel is empty, then we append this to it
+	  if (pel->eltHead == NULL) {
+	    pel->eltHead = newEventList.eltHead; 
+	    pel->eltTail = newEventList.eltTail; 
+	  } else { 
+	    pel->eltTail->elt = newEventList.eltHead; 
+	    pel->eltTail = newEventList.eltTail; 
 	  }
-	
-	pthread_mutex_unlock(&(pel->mutex));
-	
-	if (pel->size > 0 ){
 	  
-	  pthread_cond_signal(&(pel->size_thold_cv)); 
-	}		
+	  
+	  // check if we added anything; if we did, update size
+	  if (newEventList.size > 0) 
+	    {	  
+	      pel->size += newEventList.size; 
+	      //printf("added %d to pel, pel.size = %d\n", newEventList.size, pel->size); 
+	    }
+	  
+	  pthread_mutex_unlock(&(pel->mutex));
+	  
+	  if (pel->size > 0 ){
+	    
+	    pthread_cond_signal(&(pel->size_thold_cv)); 
+	  }		
+	  
+	  pthread_mutex_unlock(&(pel->size_mutex)); 	  
+	  
+	} else {
+	  
+	  printf("Oops, we dropped one, prevseq = %d, rxseq = %d \n", prevseq, rxseq);
 	
-	pthread_mutex_unlock(&(pel->size_mutex)); 	  
-	
+	}
+	prevseq = rxseq; 
       } else {
-	
-	printf("Oops, we dropped one, prevseq = %d, rxseq = %d \n", prevseq, rxseq);
-
+	printf("ISSET is false\n"); 
       }
-      prevseq = rxseq; 
+
     }
   }
   
@@ -207,16 +221,18 @@ PyNetEvent_startEventRX(PyNetEvent* self)
   }
 
   // now we fork a thread and begin queueing up events
-  pthread_mutex_lock(&(self->pnss->running_mutex)); 
 
   pthread_create((void*)&(self->pNetworkThread), NULL, 
 		 (void *)pthread_runner, self->pnss); 
 
-
-  self->pnss->running = 1; 
-  pthread_mutex_unlock(&(self->pnss->running_mutex)); 
-  	
-
+  char oldrunning = 0; 
+  while (!oldrunning) {
+    pthread_mutex_lock(&(self->pnss->running_mutex)); 
+    
+    oldrunning = self->pnss->running; 
+    pthread_mutex_unlock(&(self->pnss->running_mutex)); 
+  }
+  
 
   Py_DECREF(iterator);
   
@@ -411,25 +427,23 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   bpos += 12;
   
   // single event
-  //  uint16_t failure = 1; 
-  //  while (failure) {
+  uint16_t success = 0; 
+  uint16_t nrxnonce, hrxnonce; 
+
+  while (! success) {
     sendto(sock, buffer, bpos, 0, 
 	   (struct sockaddr*)&saServer, sizeof(saServer)); 
     
     recv(sock, buffer, 1500, 0); 
+    
+    memcpy(&nrxnonce, buffer, sizeof(nrxnonce)); 
+    hrxnonce = ntohs(nrxnonce); 
+    
     // extract out success/failure data
-    uint16_t failure = buffer[2]; 
-    /*
-  printf("received response %d %d %d %d %d %d %d %d \n",
-	 (int)buffer[0],
-	 (int)buffer[1],
-	 (int)buffer[2],
-	 (int)buffer[3],
-	 (int)buffer[4],
-	 (int)buffer[5],
-	 (int)buffer[6],
-	 (int)buffer[7]);
-	 }*/
+    success = buffer[3]; 
+    printf("RX success = %d, sentnonce = %4.4X, rxnonce = %4.4X\n", success, hnonce, hrxnonce); 
+
+  }
 
   Py_RETURN_NONE;
  
@@ -597,6 +611,7 @@ uint32_t getEvents(int sock, char * rxValidLUT,
   
   struct eventListItem_t * curelt = NULL;
   int addedcnt = 0; 
+  printf("getEvents len = %d\n", len); 
 
   while ((bpos+1) < len) 
     { 
