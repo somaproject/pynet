@@ -441,7 +441,7 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
     
     // extract out success/failure data
     success = buffer[3]; 
-    printf("RX success = %d, sentnonce = %4.4X, rxnonce = %4.4X\n", success, hnonce, hrxnonce); 
+    //printf("RX success = %d, sentnonce = %4.4X, rxnonce = %4.4X\n", success, hnonce, hrxnonce); 
 
   }
 
@@ -611,7 +611,7 @@ uint32_t getEvents(int sock, char * rxValidLUT,
   
   struct eventListItem_t * curelt = NULL;
   int addedcnt = 0; 
-  printf("getEvents len = %d\n", len); 
+  //printf("getEvents len = %d\n", len); 
 
   while ((bpos+1) < len) 
     { 
