@@ -30,8 +30,8 @@ const int EVENTRXPORT = 5000;
 #define EVENTLEN 6
 struct  event_t
 {
-  char cmd; 
-  char src; 
+  unsigned char cmd; 
+  unsigned char src; 
   uint16_t data[EVENTLEN-1]; 
 } ; 
 
@@ -69,6 +69,7 @@ typedef struct {
   int number;
   struct NetworkSharedThreadState_t * pnss; 
   pthread_t * pNetworkThread; 
+  int txsocket; 
 } PyNetEvent;
 
 int setupRXSocket(void); 

@@ -44,7 +44,8 @@ PyNetEvent_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	  return NULL; 
 
 	self->ip = PyString_FromString(addrstr); 
-	
+	self->txsocket = 0; 
+	self->txsocket = socket(AF_INET, SOCK_DGRAM, 17); 
 
 	// now the shared network state
 	self->pnss = malloc(sizeof(struct NetworkSharedThreadState_t)); 
@@ -128,19 +129,20 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	newEventList.eltHead = NULL;
 	
 	rxseq  = getEvents(socket, pnss->rxValidLUT, &newEventList);
-	
 	if (firstLoop) {
 	  firstLoop = 0;
 	  prevseq = rxseq -1;
 	} 
-	
+	//printf("rxseq = %8.8x\n", rxseq); 
 	// check for sequential RX
 	if (prevseq + 1 == rxseq ) {
 	  // good
-	  
+	  //printf("rx about to acquire size mutex, newEventList.size=%d rxseq = %d\n", newEventList.size, rxseq); 
+	  //printf("about to acquire\n"); 
 	  pthread_mutex_lock(&(pel->size_mutex)); 	
-	  
 	  pthread_mutex_lock(&(pel->mutex));
+	  //printf("success\n"); 
+
 	  // if pel is empty, then we append this to it
 	  if (pel->eltHead == NULL) {
 	    pel->eltHead = newEventList.eltHead; 
@@ -168,9 +170,7 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	  pthread_mutex_unlock(&(pel->size_mutex)); 	  
 	  
 	} else {
-	  
 	  printf("Oops, we dropped one, prevseq = %d, rxseq = %d \n", prevseq, rxseq);
-	
 	}
 	prevseq = rxseq; 
       } else {
@@ -307,9 +307,9 @@ PyNetEvent_getEvents(PyNetEvent* self)
   struct EventList_t * pel = self->pnss->pel; 
 
   // check the size
-  /* fprintf("pre-size is %d\n",  */
-/* 	  pel->size);  */
-
+  //printf("pre-size is %d\n",  pel->size); 
+	   
+   
   pthread_mutex_lock(&(pel->size_mutex)) ;
 /*   printf("PyNetEvent_getEvents(PyNetEvent* self): size is %d\n",   */
 /*  	  pel->size);   */
@@ -318,6 +318,9 @@ PyNetEvent_getEvents(PyNetEvent* self)
     pthread_cond_wait(&(pel->size_thold_cv), 
 		      &(pel->size_mutex)); 
   }
+
+  //printf("post-size is %d\n",  pel->size); 
+	   
 
   pthread_mutex_lock(&(pel->mutex)); 
   //walkEventList(pel->eltHead); 
@@ -374,13 +377,12 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
 
   struct sockaddr_in saServer; 
   
-  
-  int sock = socket(AF_INET, SOCK_DGRAM, 17); 
+  int sock = self->txsocket; 
   memset(&saServer, sizeof(saServer), 0); 
   saServer.sin_family = AF_INET; 
   saServer.sin_port = htons(EVENTTXPORT);  
   char * ip = PyString_AsString(self->ip); 
-
+  
   inet_aton(ip, &saServer.sin_addr); 
   // construct nonce
   
@@ -392,6 +394,7 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
 
   nnonce = htons(hnonce); 
   size_t bpos = 0; 
+  //printf("nonce = %d\n", hnonce); 
   memcpy(&buffer[bpos], &nnonce, sizeof(nnonce)); 
   bpos += 2; 
 
@@ -428,21 +431,36 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
   
   // single event
   uint16_t success = 0; 
+  int noncesuccess = 0;
   uint16_t nrxnonce, hrxnonce; 
 
   while (! success) {
+    //printf("sendto\n"); 
     sendto(sock, buffer, bpos, 0, 
 	   (struct sockaddr*)&saServer, sizeof(saServer)); 
     
-    recv(sock, buffer, 1500, 0); 
+    bzero(buffer, 1500); 
+    int rxlen = recv(sock, buffer, 1500, 0); 
+    if (rxlen < 8) {
+      printf("RX len was too small\n"); 
+    }
     
     memcpy(&nrxnonce, buffer, sizeof(nrxnonce)); 
     hrxnonce = ntohs(nrxnonce); 
     
     // extract out success/failure data
     success = buffer[3]; 
-    //printf("RX success = %d, sentnonce = %4.4X, rxnonce = %4.4X\n", success, hnonce, hrxnonce); 
+    if (hrxnonce == hnonce) {
+      noncesuccess = 1; 
+    } else {
+      noncesuccess = 0; 
+    }
+    
 
+    if (!success || !noncesuccess) {
+      printf("TX Response failed! success = %d, sentnonce = %4.4X, rxnonce = %4.4X\n",
+	     success, hnonce, hrxnonce); 
+    }
   }
 
   Py_RETURN_NONE;
@@ -601,7 +619,7 @@ uint32_t getEvents(int sock, char * rxValidLUT,
 			0, (struct sockaddr*)&sfrom, &fromlen); 
   
   // extract out events
-  
+  //printf("getEvents len = %d\n", len); 
   uint32_t seq = ntohl(*((int *) &buffer[0])); 
 
   
@@ -611,7 +629,8 @@ uint32_t getEvents(int sock, char * rxValidLUT,
   
   struct eventListItem_t * curelt = NULL;
   int addedcnt = 0; 
-  //printf("getEvents len = %d\n", len); 
+
+  int totalevents = 0;
 
   while ((bpos+1) < len) 
     { 
@@ -620,6 +639,7 @@ uint32_t getEvents(int sock, char * rxValidLUT,
       eventlen = ntohs(neventlen);
       bpos += 2;
       int evtnum;
+      totalevents += eventlen; 
       for (evtnum = 0; evtnum < eventlen; evtnum++)
 	{
 	  // extract out individual events
@@ -668,7 +688,7 @@ uint32_t getEvents(int sock, char * rxValidLUT,
 	}
     }
   eventlist->size = addedcnt; 
-
+  //printf("getEvents: Total events: %d\n", totalevents); 
   return seq;
   
 }
