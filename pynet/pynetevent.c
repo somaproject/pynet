@@ -441,7 +441,7 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
     
     bzero(buffer, 1500); 
     int rxlen = recv(sock, buffer, 1500, 0); 
-    if (rxlen < 8) {
+    if (rxlen < 4) {
       printf("RX len was too small\n"); 
     }
     
