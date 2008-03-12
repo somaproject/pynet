@@ -9,8 +9,8 @@ doing our byte-order operations correctly.
 
 p = pynetevent.PyNetEvent("10.0.0.2")
 
-for i in range(255):
-    p.rxSet.add((16, i))
+#for i in range(255):
+#    p.rxSet.add((16, i))
 
 p.startEventRX()
 
@@ -19,7 +19,10 @@ print "now going to get 10"
 data = []
 numrec = 0
 while (numrec < 100000):
-    rxdata = p.getEvents()
+    rxdata = None
+    while rxdata == None:
+        rxdata = p.getEvents()
+        
     data.extend(rxdata)
     numrec += len(rxdata)
     

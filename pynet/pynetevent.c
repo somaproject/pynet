@@ -314,18 +314,26 @@ PyNetEvent_getEvents(PyNetEvent* self)
 /*   printf("PyNetEvent_getEvents(PyNetEvent* self): size is %d\n",   */
 /*  	  pel->size);   */
   if (pel->size == 0 ) {
+    struct timespec timeWait; 
+    timeWait.tv_sec = 1; 
+    timeWait.tv_nsec = 0; 
     
-    pthread_cond_wait(&(pel->size_thold_cv), 
-		      &(pel->size_mutex)); 
+    // use cond_timedwait to periodically pass control pack to python
+    // interpreter so we can receive control-C and other signals
+    int res = pthread_cond_timedwait(&(pel->size_thold_cv), 
+				     &(pel->size_mutex), &timeWait); 
+    if (res == ETIMEDOUT) {
+      pthread_mutex_unlock(&(pel->size_mutex)); 
+      Py_INCREF(Py_None); 
+      return Py_None; 
+    }
   }
 
   //printf("post-size is %d\n",  pel->size); 
 	   
 
   pthread_mutex_lock(&(pel->mutex)); 
-  //walkEventList(pel->eltHead); 
 
-  //printf("pel->mutex locked\n"); 
   struct eventListItem_t * phead = pel->eltHead; 
 
   pel->eltHead = NULL; 
@@ -335,8 +343,6 @@ PyNetEvent_getEvents(PyNetEvent* self)
   int pos = 0; 
 
   while(phead != NULL ) {
-    //printf("here!\n");
-    // there's a real element there!
     struct eventListItem_t * curhead = phead; 
     
     PyObject * outtuple = eventToPyTuple(&(curhead->e)); 
@@ -350,7 +356,8 @@ PyNetEvent_getEvents(PyNetEvent* self)
 
   pthread_mutex_unlock(&(pel->mutex)); 
   pthread_mutex_unlock(&(pel->size_mutex)); 
-  //printf("here!\n");
+
+
   return outlist; 
 
   
