@@ -114,14 +114,14 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
     fd_set readfds; 
     FD_SET(socket, &readfds); 
     struct timeval timeout; 
-    timeout.tv_sec = 0; 
+    timeout.tv_sec = 1; 
     timeout.tv_usec = 000; 
-    int retval = select(socket+1, &readfds, NULL, NULL,  NULL); //&timeout); 
+    int retval = select(socket+1, &readfds, NULL, NULL,  &timeout); 
     
     if (retval == -1) { 
       printf("Error with select\n"); 
     } else if (retval == 0) {
-      printf("timeout\n"); 
+      //printf("timeout\n"); 
     } else { // at least one FD
       if(FD_ISSET(socket, &readfds) && retval > 0) {
 	
@@ -265,7 +265,6 @@ PyObject * eventToPyTuple(struct event_t * evt)
 static PyObject * 
 PyNetEvent_stopEventRX(PyNetEvent* self)
 {
-  //printf("PyNetEvent_stopEventRX(PyNetEvent* self)\n"); 
 
   pthread_mutex_lock(&(self->pnss->running_mutex)); 
   self->pnss->running = 0; 
@@ -273,7 +272,7 @@ PyNetEvent_stopEventRX(PyNetEvent* self)
   pthread_join(*(self->pNetworkThread), 0); 
 
   // flush the buffer
-  
+
 	  
   pthread_mutex_lock(&(self->pnss->pel->mutex));
 
@@ -453,21 +452,17 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
     struct timeval timeout; 
     timeout.tv_sec = 1; 
     timeout.tv_usec = 0; 
-    int retval = select(sock+1, &readfds, NULL, NULL,  NULL); //&timeout); 
+    int retval = select(sock+1, &readfds, NULL, NULL,  &timeout); 
 
     if (retval == -1) { 
       PyErr_SetString(PyExc_IOError, "Error in select waiting for EventTX response from soma"); 
-      Py_RETURN_NONE; 
+      return 0; 
     } else if (retval == 0) {
       PyErr_SetString(PyExc_IOError, "Timed out waiting for EventTX response from soma");       
-      Py_RETURN_NONE; 
+      return 0; 
     }
 
-
     int rxlen = recv(sock, buffer, 1500, 0); 
-
-    
-
 
     if (rxlen < 4) {
       printf("RX len was too small\n"); 
