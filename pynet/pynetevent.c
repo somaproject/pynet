@@ -447,14 +447,35 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
 	   (struct sockaddr*)&saServer, sizeof(saServer)); 
     
     bzero(buffer, 1500); 
+
+    fd_set readfds; 
+    FD_SET(sock, &readfds); 
+    struct timeval timeout; 
+    timeout.tv_sec = 1; 
+    timeout.tv_usec = 0; 
+    int retval = select(sock+1, &readfds, NULL, NULL,  NULL); //&timeout); 
+
+    if (retval == -1) { 
+      PyErr_SetString(PyExc_IOError, "Error in select waiting for EventTX response from soma"); 
+      Py_RETURN_NONE; 
+    } else if (retval == 0) {
+      PyErr_SetString(PyExc_IOError, "Timed out waiting for EventTX response from soma");       
+      Py_RETURN_NONE; 
+    }
+
+
     int rxlen = recv(sock, buffer, 1500, 0); 
+
+    
+
+
     if (rxlen < 4) {
       printf("RX len was too small\n"); 
     }
     
     memcpy(&nrxnonce, buffer, sizeof(nrxnonce)); 
     hrxnonce = ntohs(nrxnonce); 
-    
+
     // extract out success/failure data
     success = buffer[3]; 
     if (hrxnonce == hnonce) {
