@@ -174,7 +174,7 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	}
 	prevseq = rxseq; 
       } else {
-	printf("ISSET is false\n"); 
+	// FIXME -- WHY IS THIS THE CASE? //printf("ISSET is false\n"); 
       }
 
     }
