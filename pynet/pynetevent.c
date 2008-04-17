@@ -3,7 +3,7 @@
 static void
 PyNetEvent_dealloc(PyNetEvent* self)
 {
-
+  printf("PyNetEvent_dealloc\n"); 
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -46,10 +46,10 @@ PyNetEvent_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	self->ip = PyString_FromString(addrstr); 
 	self->txsocket = 0; 
 	self->txsocket = socket(AF_INET, SOCK_DGRAM, 17); 
-
 	// now the shared network state
 	self->pnss = malloc(sizeof(struct NetworkSharedThreadState_t)); 
-
+	printf("mallocing NetworkSharedThreadState_t with size =%d\n", 
+	       sizeof(struct NetworkSharedThreadState_t)); 
 	pthread_mutex_init(&(self->pnss->running_mutex), NULL); 	
 	self->pnss->running = 0; 
 	
@@ -112,6 +112,7 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
     
     // now use select as a time-out-able interface
     fd_set readfds; 
+    FD_ZERO(&readfds); 
     FD_SET(socket, &readfds); 
     struct timeval timeout; 
     timeout.tv_sec = 1; 
@@ -174,7 +175,8 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	}
 	prevseq = rxseq; 
       } else {
-	// FIXME -- WHY IS THIS THE CASE? //printf("ISSET is false\n"); 
+	// FIXME -- WHY IS THIS THE CASE? 
+	printf("ISSET is false\n"); 
       }
 
     }
@@ -196,7 +198,7 @@ PyNetEvent_startEventRX(PyNetEvent* self)
 
   // build the constant-time LUT
   bzero(self->pnss->rxValidLUT, 256*256); 
-  
+  printf("PyNetEvent::startRX\n");
   while ((item = PyIter_Next(iterator)) != 0) {
     /* do something with item */
     // get tuple
@@ -265,6 +267,7 @@ PyObject * eventToPyTuple(struct event_t * evt)
 static PyObject * 
 PyNetEvent_stopEventRX(PyNetEvent* self)
 {
+  printf("PyNetEvent::stopEventRX\n");
 
   pthread_mutex_lock(&(self->pnss->running_mutex)); 
   self->pnss->running = 0; 
@@ -337,7 +340,7 @@ PyNetEvent_getEvents(PyNetEvent* self)
 
   pel->eltHead = NULL; 
   pel->eltTail = NULL; 
-  pel->size = 0 ; 
+
 
   int pos = 0; 
 
@@ -351,8 +354,9 @@ PyNetEvent_getEvents(PyNetEvent* self)
     //printf("cmd %d, id %d %d\n", curhead->e.cmd, curhead->e.src, curhead->elt); 
     free(curhead); 
   }
+  assert(pos == pel->size); 
 
-
+  pel->size = 0 ; 
   pthread_mutex_unlock(&(pel->mutex)); 
   pthread_mutex_unlock(&(pel->size_mutex)); 
 
@@ -710,7 +714,8 @@ uint32_t getEvents(int sock, char * rxValidLUT,
 	  
 	}
     }
-  eventlist->size = addedcnt; 
+  eventlist->size = addedcnt;  // the input list is always empty, 
+  // so we can just set the size
   //printf("getEvents: Total events: %d\n", totalevents); 
   return seq;
   

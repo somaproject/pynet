@@ -28,3 +28,6 @@ Returns a list of event objects
 eio.stop()
 
 
+------------------------------------------------------------------
+Note that getEvents() blocks waiting for a conditon response...
+
