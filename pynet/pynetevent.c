@@ -3,7 +3,6 @@
 static void
 PyNetEvent_dealloc(PyNetEvent* self)
 {
-  printf("PyNetEvent_dealloc\n"); 
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -198,7 +197,7 @@ PyNetEvent_startEventRX(PyNetEvent* self)
 
   // build the constant-time LUT
   bzero(self->pnss->rxValidLUT, 256*256); 
-  printf("PyNetEvent::startRX\n");
+  
   while ((item = PyIter_Next(iterator)) != 0) {
     /* do something with item */
     // get tuple
@@ -267,7 +266,6 @@ PyObject * eventToPyTuple(struct event_t * evt)
 static PyObject * 
 PyNetEvent_stopEventRX(PyNetEvent* self)
 {
-  printf("PyNetEvent::stopEventRX\n");
 
   pthread_mutex_lock(&(self->pnss->running_mutex)); 
   self->pnss->running = 0; 
@@ -351,6 +349,7 @@ PyNetEvent_getEvents(PyNetEvent* self)
     PyList_Append(outlist, outtuple); 
     pos += 1; 
     phead = curhead->elt; 
+    Py_DECREF(outtuple); 
     //printf("cmd %d, id %d %d\n", curhead->e.cmd, curhead->e.src, curhead->elt); 
     free(curhead); 
   }

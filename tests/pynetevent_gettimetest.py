@@ -14,11 +14,10 @@ for i in range(255):
 
 p.startEventRX()
 
-print "now going to get 10"
 # we expect to get 10
 data = []
 numrec = 0
-while (numrec < 100):
+while (numrec < 100000):
     rxdata = None
     while rxdata == None:
         rxdata = p.getEvents()
@@ -40,13 +39,15 @@ print eventhist
 # these should be consecutive
 p.stopEventRX()
 oldx = 0
+pos = 0
 for e in data:
     d0 = e[2]
     d1 = e[3]
     d2 = e[4]
     x =  (d0 << 32 | d1 << 16 | d2)
-    print x
-    if x != oldx + 1:
-        print "OMG ERROR" 
+    if x != oldx + 1 and pos != 0:
+        print "OMG ERROR"
+        print x, oldx
 
     oldx = x
+    pos += 1

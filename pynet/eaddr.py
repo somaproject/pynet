@@ -43,6 +43,7 @@ SYSCONTROL = 1
 BOOTSTORE = 2
 NETWORK = 3
 NETCONTROL = 4
+SYSSTATUS = 6
 JTAG = 7
 DSP = []
 for i in xrange(64):
