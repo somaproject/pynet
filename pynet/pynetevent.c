@@ -84,7 +84,7 @@ PyNetEvent_init(PyNetEvent *self, PyObject *args, PyObject *kwds)
 
 void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 {
-  
+  printf("phread_runner\n"); 
   struct EventList_t * pel = pnss->pel; 
   
   int socket = setupRXSocket(); 
@@ -266,7 +266,7 @@ PyObject * eventToPyTuple(struct event_t * evt)
 static PyObject * 
 PyNetEvent_stopEventRX(PyNetEvent* self)
 {
-
+  printf("stopEventRX\n")
   pthread_mutex_lock(&(self->pnss->running_mutex)); 
   self->pnss->running = 0; 
   pthread_mutex_unlock(&(self->pnss->running_mutex)); 
