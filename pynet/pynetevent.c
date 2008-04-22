@@ -84,7 +84,6 @@ PyNetEvent_init(PyNetEvent *self, PyObject *args, PyObject *kwds)
 
 void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 {
-  printf("phread_runner\n"); 
   struct EventList_t * pel = pnss->pel; 
   
   int socket = setupRXSocket(); 
@@ -174,7 +173,6 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	}
 	prevseq = rxseq; 
       } else {
-	// FIXME -- WHY IS THIS THE CASE? 
 	printf("ISSET is false\n"); 
       }
 
@@ -266,7 +264,7 @@ PyObject * eventToPyTuple(struct event_t * evt)
 static PyObject * 
 PyNetEvent_stopEventRX(PyNetEvent* self)
 {
-  printf("stopEventRX\n")
+
   pthread_mutex_lock(&(self->pnss->running_mutex)); 
   self->pnss->running = 0; 
   pthread_mutex_unlock(&(self->pnss->running_mutex)); 
@@ -339,6 +337,9 @@ PyNetEvent_getEvents(PyNetEvent* self)
   pel->eltHead = NULL; 
   pel->eltTail = NULL; 
 
+  pel->size = 0 ; 
+  pthread_mutex_unlock(&(pel->mutex)); 
+  pthread_mutex_unlock(&(pel->size_mutex)); 
 
   int pos = 0; 
 
@@ -355,9 +356,6 @@ PyNetEvent_getEvents(PyNetEvent* self)
   }
   assert(pos == pel->size); 
 
-  pel->size = 0 ; 
-  pthread_mutex_unlock(&(pel->mutex)); 
-  pthread_mutex_unlock(&(pel->size_mutex)); 
 
 
   return outlist; 
