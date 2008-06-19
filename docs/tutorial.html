@@ -6,6 +6,7 @@
 <meta name="generator" content="Docutils 0.4.1: http://docutils.sourceforge.net/" />
 <title>SomaPyNet Tutorial</title>
 <meta name="author" content="Eric Jonas &lt;jonas&#64;mit.edu&gt;" />
+<meta name="date" content="2008-06-18" />
 <style type="text/css">
 
 /*
@@ -300,6 +301,10 @@ ul.auto-toc {
 <tbody valign="top">
 <tr><th class="docinfo-name">Author:</th>
 <td>Eric Jonas &lt;<a class="reference" href="mailto:jonas&#64;mit.edu">jonas&#64;mit.edu</a>&gt;</td></tr>
+<tr><th class="docinfo-name">Date:</th>
+<td>2008-06-18</td></tr>
+<tr><th class="docinfo-name">Revision:</th>
+<td>2867</td></tr>
 </tbody>
 </table>
 <div class="contents topic">
@@ -323,14 +328,16 @@ Event cycle, blah</p>
 </div>
 <div class="section">
 <h1><a class="toc-backref" href="#id2" id="module-overview" name="module-overview">Module Overview</a></h1>
+<p>Event</p>
+<p>eaddr:</p>
 <blockquote>
-Event
-eaddr
-neteventio</blockquote>
+address mask for destination</blockquote>
+<p>neteventio</p>
 </div>
 <div class="section">
 <h1><a class="toc-backref" href="#id3" id="example-1-getting-timer-events" name="example-1-getting-timer-events">Example 1: getting Timer Events</a></h1>
-<p>The soma timer is the thing that timestamps.</p>
+<p>The Soma timer is the first device on the event bus. Every event cycle
+it broadcasts the current timestamp as an event to all devices.</p>
 <p>First, we import the necessary modules:</p>
 <pre class="literal-block">
 from somapynet import eaddr
@@ -432,7 +439,7 @@ eio.addRXMask(pingresponse, eaddr.SYSCONTROL)
 </pre>
 <p>This will let us receive pings from SysControl.</p>
 <p>Now, to make sure we don't miss any ping responses, we must start
-receiving packets now.:</p>
+receiving packets now.</p>
 <pre class="literal-block">
 eio.start()
 </pre>
@@ -446,8 +453,12 @@ e = Event()
 e.src = eaddr.NETWORK
 e.cmd = pingrequest
 </pre>
-<p>The above does two things: first, it sets the command of the</p>
-<p>To set the data we:</p>
+<p>The above does two things: first, it sets the command of the
+destination event. Second, it sets the &quot;source&quot;, that is, the source
+that this event came from. Since we are using the network interface,
+we set it to the address of the network device.</p>
+<p>All device pings are required to echo back event dataword four as-is.
+Here we set the last word:</p>
 <pre class="literal-block">
 e.data[4] = 0x1234
 </pre>
@@ -505,6 +516,7 @@ eio.stop()
 $ python pingsys.py
 cmd: 09 src: 01 0000 0000 0000 0000 1234
 </pre>
+<p>We clearly recover data[4] = 0x1234.</p>
 </div>
 </div>
 </div>
