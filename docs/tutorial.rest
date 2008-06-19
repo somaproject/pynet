@@ -1,5 +1,5 @@
 =========================
-SomaPyNet Tutorial
+SomaPyNet event Tutorial
 =========================
 ---------------------------------------------------
 Python network library for communication with Soma
@@ -14,28 +14,62 @@ Python network library for communication with Soma
 Introduction
 ============
 
-Soma events are the short, 12-byte command-and-control packets
-that we use to do IO. [FIXME: Cite event / data bus IO docs?]
-Event cycle, blah
+Soma events are the short, 12-byte low-latency command packets that are
+used to control system state both on and off the Soma Backplane. An Event
+can be sent to any of the 80 devices on the event bus, simultaneously. This
+makes for efficient broadcast and multicast communication with
+guaranteed latency. 
 
-This is the interface to that event bus over the network. 
+[FIXME: Cite event bus docs]. 
+
+An **event cycle** is a single transaction cycle on the event bus
+where every device is given the opportunity to send a single event
+to an arbitrary subset of the other devices. 
+
+One of the devices on the event bus is the network interface. This
+allows for events to enter and exit the Soma Backplane via
+gigabit ethernet, so that you can control it by remote computer. 
+
+SomaPyNet is a Python package that lets you send events to and receive
+events from the Soma Backplane via the network. It is designed for
+ease of use, to enable the quick authoring of control and debug
+scripts. Note that it is heavily buffered and multithreaded. 
+
 
 Module Overview
 ================
-Event
-      
-eaddr:
 
-    address mask for destination
+Event Object
+-------------
+An Event object in SomaPyNet closely mirrors the actual event, with 
+the following fields:
+
+=============== ==================================================
+Object field    Description
+=============== ==================================================
+  Event.cmd     8-bit event command
+  Event.src     8-bit source of this particular command
+  Event.data[]  5 16-bit words that represent the bulk of
+                the event data
+=============== ==================================================
+      
+Eaddr
+---------------
+The Eaddr module contains both the destination mask for
+transmitting events, as well as the DeviceIDs of some common
+Soma EventBus devices
 
 neteventio 
-   
+----------------
+NetEventIO is the main multithreaded object for sending and 
+receiving events. 
 
 Example 1: getting Timer Events
 ===============================
 
 The Soma timer is the first device on the event bus. Every event cycle
-it broadcasts the current timestamp as an event to all devices.
+the timer broadcasts the current timestamp as an event to all devices.
+Our goal here is to write a simple script to read these *time* events.
 
 First, we import the necessary modules::
 
@@ -75,6 +109,7 @@ events. To see the events we can print them::
       print event
 
 We should always stop the event receiver when we are done.::
+
   eio.stop()
 
 
@@ -130,7 +165,6 @@ We start by importing the necessary modules::
 
 we import the Event class as we will want to *send*
 events to soma. 
-
 
 Now we connect as before:::
 

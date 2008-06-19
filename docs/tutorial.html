@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.4.1: http://docutils.sourceforge.net/" />
-<title>SomaPyNet Tutorial</title>
+<title>SomaPyNet event Tutorial</title>
 <meta name="author" content="Eric Jonas &lt;jonas&#64;mit.edu&gt;" />
 <meta name="date" content="2008-06-18" />
 <style type="text/css">
@@ -292,8 +292,8 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="somapynet-tutorial">
-<h1 class="title">SomaPyNet Tutorial</h1>
+<div class="document" id="somapynet-event-tutorial">
+<h1 class="title">SomaPyNet event Tutorial</h1>
 <h2 class="subtitle" id="python-network-library-for-communication-with-soma">Python network library for communication with Soma</h2>
 <table class="docinfo" frame="void" rules="none">
 <col class="docinfo-name" />
@@ -311,33 +311,85 @@ ul.auto-toc {
 <p class="topic-title first"><a id="contents" name="contents">Contents</a></p>
 <ul class="simple">
 <li><a class="reference" href="#introduction" id="id1" name="id1">Introduction</a></li>
-<li><a class="reference" href="#module-overview" id="id2" name="id2">Module Overview</a></li>
-<li><a class="reference" href="#example-1-getting-timer-events" id="id3" name="id3">Example 1: getting Timer Events</a></li>
-<li><a class="reference" href="#example-2-pinging-soma" id="id4" name="id4">Example 2: Pinging Soma</a><ul>
-<li><a class="reference" href="#setting-the-event-destination" id="id5" name="id5">Setting the Event Destination</a></li>
+<li><a class="reference" href="#module-overview" id="id2" name="id2">Module Overview</a><ul>
+<li><a class="reference" href="#event-object" id="id3" name="id3">Event Object</a></li>
+<li><a class="reference" href="#eaddr" id="id4" name="id4">Eaddr</a></li>
+<li><a class="reference" href="#neteventio" id="id5" name="id5">neteventio</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#example-1-getting-timer-events" id="id6" name="id6">Example 1: getting Timer Events</a></li>
+<li><a class="reference" href="#example-2-pinging-soma" id="id7" name="id7">Example 2: Pinging Soma</a><ul>
+<li><a class="reference" href="#setting-the-event-destination" id="id8" name="id8">Setting the Event Destination</a></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="section">
 <h1><a class="toc-backref" href="#id1" id="introduction" name="introduction">Introduction</a></h1>
-<p>Soma events are the short, 12-byte command-and-control packets
-that we use to do IO. [FIXME: Cite event / data bus IO docs?]
-Event cycle, blah</p>
-<p>This is the interface to that event bus over the network.</p>
+<p>Soma events are the short, 12-byte low-latency command packets that are
+used to control system state both on and off the Soma Backplane. An Event
+can be sent to any of the 80 devices on the event bus, simultaneously. This
+makes for efficient broadcast and multicast communication with
+guaranteed latency.</p>
+<p>[FIXME: Cite event bus docs].</p>
+<p>An <strong>event cycle</strong> is a single transaction cycle on the event bus
+where every device is given the opportunity to send a single event
+to an arbitrary subset of the other devices.</p>
+<p>One of the devices on the event bus is the network interface. This
+allows for events to enter and exit the Soma Backplane via
+gigabit ethernet, so that you can control it by remote computer.</p>
+<p>SomaPyNet is a Python package that lets you send events to and receive
+events from the Soma Backplane via the network. It is designed for
+ease of use, to enable the quick authoring of control and debug
+scripts. Note that it is heavily buffered and multithreaded.</p>
 </div>
 <div class="section">
 <h1><a class="toc-backref" href="#id2" id="module-overview" name="module-overview">Module Overview</a></h1>
-<p>Event</p>
-<p>eaddr:</p>
-<blockquote>
-address mask for destination</blockquote>
-<p>neteventio</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id3" id="event-object" name="event-object">Event Object</a></h2>
+<p>An Event object in SomaPyNet closely mirrors the actual event, with
+the following fields:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head">Object field</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td>Event.cmd</td>
+<td>8-bit event command</td>
+</tr>
+<tr><td>Event.src</td>
+<td>8-bit source of this particular command</td>
+</tr>
+<tr><td>Event.data[]</td>
+<td>5 16-bit words that represent the bulk of
+the event data</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section">
-<h1><a class="toc-backref" href="#id3" id="example-1-getting-timer-events" name="example-1-getting-timer-events">Example 1: getting Timer Events</a></h1>
+<h2><a class="toc-backref" href="#id4" id="eaddr" name="eaddr">Eaddr</a></h2>
+<p>The Eaddr module contains both the destination mask for
+transmitting events, as well as the DeviceIDs of some common
+Soma EventBus devices</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id5" id="neteventio" name="neteventio">neteventio</a></h2>
+<p>NetEventIO is the main multithreaded object for sending and
+receiving events.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id6" id="example-1-getting-timer-events" name="example-1-getting-timer-events">Example 1: getting Timer Events</a></h1>
 <p>The Soma timer is the first device on the event bus. Every event cycle
-it broadcasts the current timestamp as an event to all devices.</p>
+the timer broadcasts the current timestamp as an event to all devices.
+Our goal here is to write a simple script to read these <em>time</em> events.</p>
 <p>First, we import the necessary modules:</p>
 <pre class="literal-block">
 from somapynet import eaddr
@@ -375,10 +427,10 @@ events. To see the events we can print them:</p>
 for event in erx:
     print event
 </pre>
-<dl class="docutils">
-<dt>We should always stop the event receiver when we are done.::</dt>
-<dd>eio.stop()</dd>
-</dl>
+<p>We should always stop the event receiver when we are done.:</p>
+<pre class="literal-block">
+eio.stop()
+</pre>
 <p>The entire script is below</p>
 <pre class="literal-block">
 from somapynet import eaddr
@@ -413,7 +465,7 @@ cmd: 10 src: 00 0000 0097 8B24 0000 0000
 </pre>
 </div>
 <div class="section">
-<h1><a class="toc-backref" href="#id4" id="example-2-pinging-soma" name="example-2-pinging-soma">Example 2: Pinging Soma</a></h1>
+<h1><a class="toc-backref" href="#id7" id="example-2-pinging-soma" name="example-2-pinging-soma">Example 2: Pinging Soma</a></h1>
 <p>Most Soma devices support a <strong>ping</strong> event (cmd=0x08), which
 will reply to the sender in some device-specified way. This is
 analogous to the popular <tt class="docutils literal"><span class="pre">ping</span></tt> network utility for
@@ -463,7 +515,7 @@ Here we set the last word:</p>
 e.data[4] = 0x1234
 </pre>
 <div class="section">
-<h2><a class="toc-backref" href="#id5" id="setting-the-event-destination" name="setting-the-event-destination">Setting the Event Destination</a></h2>
+<h2><a class="toc-backref" href="#id8" id="setting-the-event-destination" name="setting-the-event-destination">Setting the Event Destination</a></h2>
 <p>Now we set the send mask:</p>
 <pre class="literal-block">
 ea = eaddr.TXDest()
