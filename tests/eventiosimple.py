@@ -14,7 +14,7 @@ eio.start()
 
 e = Event()
 e.src = eaddr.NETWORK
-e.cmd = 0x20
+e.cmd = 0x08
 ea = eaddr.TXDest()
 ea[eaddr.SYSCONTROL] = 1
 

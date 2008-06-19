@@ -1,0 +1,227 @@
+=========================
+SomaPyNet Tutorial
+=========================
+---------------------------------------------------
+Python network library for communication with Soma
+---------------------------------------------------
+:Author: Eric Jonas <jonas@mit.edu>
+:Date: $LastChangeDate$
+:Version: $Revision$
+.. contents::
+
+
+Introduction
+============
+
+Soma events are the short, 12-byte command-and-control packets
+that we use to do IO. [FIXME: Cite event / data bus IO docs?]
+Event cycle, blah
+
+This is the interface to that event bus over the network. 
+
+Module Overview
+================
+Event
+      
+eaddr:
+
+    address mask for destination
+
+neteventio 
+   
+
+Example 1: getting Timer Events
+===============================
+
+The Soma timer is the first device on the event bus. Every event cycle
+it broadcasts the current timestamp as an event to all devices.
+
+First, we import the necessary modules::
+
+  from somapynet import eaddr 
+  from somapynet.neteventio import NetEventIO	
+
+Then we create a NetEventIO object and point it at Soma's IP address. 
+By default this is 10.0.0.2::
+
+  eio = NetEventIO("10.0.0.2")
+
+The Soma event bus has a great deal of traffic on it. We set a *mask* 
+to limit which events we see. By default, the mask is empty -- no events are 
+passed into Python. Since the timer has device ID **0** and the 
+"time" event has **cmd=0x10**, we add those to the mask::
+
+  timerid = 0
+  timecmd = 0x10
+
+  eio.addRXMask(timecmd, timerid)
+
+Then we start receiving events. Once you call ``start()``, all events
+are buffered by the NetEventIO object. This allows you to query them at
+your leisure.:: 
+
+  eio.start()
+
+To actually acquire the events we use the ``getEvents()`` method. This returns
+a list of Event objects::
+
+  erx = eio.getEvents()
+
+``getEvents()`` will block (not return) until there are available
+events. To see the events we can print them::
+
+  for event in erx:
+      print event
+
+We should always stop the event receiver when we are done.::
+  eio.stop()
+
+
+The entire script is below :: 
+
+  from somapynet import eaddr 
+  from somapynet.neteventio import NetEventIO	
+
+  eio = NetEventIO("10.0.0.2")
+
+  timerid = 0
+  timecmd = 0x10
+
+  eio.addRXMask(timecmd, timerid)
+
+  eio.start()
+
+  erx = eio.getEvents()
+  for event in erx:
+      print event
+
+  eio.stop()
+
+It is also available in the tutorials directory as ``gettime.py``. 
+
+When we run it we should see something similar to the following:::
+
+  $ python gettime.py 
+  cmd: 10 src: 00 0000 0097 8B1E 0000 0000
+  cmd: 10 src: 00 0000 0097 8B1F 0000 0000
+  cmd: 10 src: 00 0000 0097 8B20 0000 0000
+  cmd: 10 src: 00 0000 0097 8B21 0000 0000
+  cmd: 10 src: 00 0000 0097 8B22 0000 0000
+  cmd: 10 src: 00 0000 0097 8B23 0000 0000
+  cmd: 10 src: 00 0000 0097 8B24 0000 0000
+
+
+Example 2: Pinging Soma
+===================================
+
+Most Soma devices support a **ping** event (cmd=0x08), which
+will reply to the sender in some device-specified way. This is
+analogous to the popular ``ping`` network utility for 
+determining if a host on an IP network is "alive". 
+
+Here we will try and ping the SysControl device, which
+manages Soma booting and device status. 
+We start by importing the necessary modules::
+
+  from somapynet.event  import Event
+  from somapynet.neteventio import NetEventIO	
+  from somapynet import eaddr
+
+we import the Event class as we will want to *send*
+events to soma. 
+
+
+Now we connect as before:::
+
+  eio = NetEventIO("10.0.0.2")
+
+but this time use the ping response ID when setting the mask:::
+
+  pingresponse = 0x09
+  eio.addRXMask(pingresponse, eaddr.SYSCONTROL)
+
+This will let us receive pings from SysControl. 
+
+Now, to make sure we don't miss any ping responses, we must start
+receiving packets now. :: 
+
+  eio.start()
+
+This is a common pattern when working with the NetEventIO
+interface. We must always start the receiver before we either send or
+receive events to avoid race conditions.
+
+Now, we can construct an event as follows: ::
+
+  pingrequest = 0x08
+  e = Event()
+  e.src = eaddr.NETWORK
+  e.cmd = pingrequest
+
+The above does two things: first, it sets the command of the
+destination event. Second, it sets the "source", that is, the source
+that this event came from. Since we are using the network interface,
+we set it to the address of the network device. 
+
+All device pings are required to echo back event dataword four as-is.
+Here we set the last word::
+
+  e.data[4] = 0x1234
+
+Setting the Event Destination
+------------------------------
+
+Now we set the send mask: ::
+
+  ea = eaddr.TXDest()
+  ea[eaddr.SYSCONTROL] = 1
+
+then we send it::
+
+  eio.sendEvent(ea, e)
+
+We then get the response: ::
+
+  erx = eio.getEvents()
+  for event in erx:
+      print event
+
+  eio.stop()
+
+The total program: ::
+
+  from somapynet.event  import Event
+  from somapynet.neteventio import NetEventIO	
+  from somapynet import eaddr
+
+  eio = NetEventIO("10.0.0.2")
+
+  pingresponse = 0x09
+  eio.addRXMask(pingresponse, eaddr.SYSCONTROL)
+
+  eio.start()
+
+  pingrequest = 0x08
+  e = Event()
+  e.src = eaddr.NETWORK
+  e.cmd = pingrequest
+  e.data[4] = 0x1234
+
+  ea = eaddr.TXDest()
+  ea[eaddr.SYSCONTROL] = 1
+
+  eio.sendEvent(ea, e)
+
+  erx = eio.getEvents()
+  for event in erx:
+      print event
+
+  eio.stop()
+
+
+The result:::
+
+  $ python pingsys.py 
+  cmd: 09 src: 01 0000 0000 0000 0000 1234
+
+We clearly recover data[4] = 0x1234. 
