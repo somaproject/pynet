@@ -5,7 +5,7 @@ SomaPyNet Tutorial
 Python network library for communication with Soma
 ---------------------------------------------------
 :Author: Eric Jonas <jonas@mit.edu>
-:Date: $LastChangeDate$
+:Date: $Date$
 :Version: $Revision$
 .. contents::
 
