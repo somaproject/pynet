@@ -1,0 +1,11 @@
+Source: pynet
+Section: soma
+Priority: extra
+Maintainer: Stuart Layton <slayton@mit.edu>
+Build-Depends: cdbs, debhelper (>= 5)
+Standards-Version: 3.7.2
+
+Package: python-somapynet
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-numpy
+Description: Python Library for communicating over the soma network 
