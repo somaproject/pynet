@@ -1,6 +1,6 @@
-pynet (1.0-1) unstable; urgency=low
+pynet (1.0-1ubuntu1) stable; urgency=low
 
   * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
 
- -- Stuart Layton <slayton@mit.edu>  Wed, 02 Jul 2008 13:23:09 -0400
+ -- Stuart Layton <slayton@mit.edu>  Tue, 29 Jul 2008 13:23:09 -0400
 

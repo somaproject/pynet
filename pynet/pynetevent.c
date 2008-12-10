@@ -47,8 +47,8 @@ PyNetEvent_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	self->txsocket = socket(AF_INET, SOCK_DGRAM, 17); 
 	// now the shared network state
 	self->pnss = malloc(sizeof(struct NetworkSharedThreadState_t)); 
-	printf("mallocing NetworkSharedThreadState_t with size =%d\n", 
-	       sizeof(struct NetworkSharedThreadState_t)); 
+/* 	printf("mallocing NetworkSharedThreadState_t with size =%d\n",  */
+/* 	       sizeof(struct NetworkSharedThreadState_t));  */
 	pthread_mutex_init(&(self->pnss->running_mutex), NULL); 	
 	self->pnss->running = 0; 
 	
@@ -169,11 +169,11 @@ void pthread_runner(struct NetworkSharedThreadState_t * pnss)
 	  pthread_mutex_unlock(&(pel->size_mutex)); 	  
 	  
 	} else {
-	  printf("Oops, we dropped one, prevseq = %d, rxseq = %d \n", prevseq, rxseq);
+	  printf("WARNING: packet dropped : prevseq = %d, rxseq = %d \n", prevseq, rxseq);
 	}
 	prevseq = rxseq; 
       } else {
-	printf("ISSET is false\n"); 
+	//printf("ISSET is false\n"); 
       }
 
     }
@@ -297,7 +297,7 @@ PyNetEvent_stopEventRX(PyNetEvent* self)
 }
 
 static PyObject *
-PyNetEvent_getEvents(PyNetEvent* self)
+PyNetEvent_getEvents(PyNetEvent* self,  PyObject *args)
 {
 
   PyObject * outlist = PyList_New(0); 
@@ -305,25 +305,39 @@ PyNetEvent_getEvents(PyNetEvent* self)
   struct EventList_t * pel = self->pnss->pel; 
 
   // check the size
-  //printf("pre-size is %d\n",  pel->size); 
-	   
+  //  printf("pre-size is %d\n",  pel->size); 
+  
+  int blocking = 0; 
+
+  if (!PyArg_ParseTuple(args, "b", &blocking))
+        return NULL;
    
   pthread_mutex_lock(&(pel->size_mutex)) ;
 /*   printf("PyNetEvent_getEvents(PyNetEvent* self): size is %d\n",   */
 /*  	  pel->size);   */
   if (pel->size == 0 ) {
-    struct timespec timeWait; 
-    timeWait.tv_sec = 1; 
-    timeWait.tv_nsec = 0; 
-    
-    // use cond_timedwait to periodically pass control pack to python
-    // interpreter so we can receive control-C and other signals
-    int res = pthread_cond_timedwait(&(pel->size_thold_cv), 
-				     &(pel->size_mutex), &timeWait); 
-    if (res == ETIMEDOUT) {
+    if (!blocking) {
+      // nonblocking call, return none
       pthread_mutex_unlock(&(pel->size_mutex)); 
-      Py_INCREF(Py_None); 
+
+      Py_INCREF(Py_None);
       return Py_None; 
+
+    } else { 
+      struct timespec timeWait; 
+      gettimeofday(&timeWait, NULL); 
+      timeWait.tv_sec += 1; 
+      timeWait.tv_nsec = 0; 
+      
+      // use cond_timedwait to periodically pass control pack to python
+      // interpreter so we can receive control-C and other signals
+      int res = pthread_cond_timedwait(&(pel->size_thold_cv), 
+				       &(pel->size_mutex), &timeWait); 
+      if (res == ETIMEDOUT) {
+	pthread_mutex_unlock(&(pel->size_mutex)); 
+	Py_INCREF(Py_None); 
+	return Py_None; 
+    }
     }
   }
 
@@ -510,7 +524,7 @@ static PyMethodDef PyNetEvent_methods[] = {
      "stop rx of event packets"}, 
     {"sendEvent", (PyCFunction)PyNetEvent_send, METH_VARARGS, 
      "send event packet"}, 
-    {"getEvents", (PyCFunction)PyNetEvent_getEvents, METH_NOARGS, 
+    {"getEvents", (PyCFunction)PyNetEvent_getEvents, METH_VARARGS, 
      "Get the events, as "
      "a list of (cmd, src, data1, data2, data3, data4, data5)"}, 
     {NULL}  /* Sentinel */

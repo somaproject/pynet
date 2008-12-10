@@ -70,11 +70,11 @@ class NetEventIO(object):
          
         self.pne.sendEvent(edestaddr.toTuple(), event.toTuple())
 
-    def getEvents(self):
+    def getEvents(self, blocking=True):
         eventout = []
         events = None
         while events == None:
-            events =  self.pne.getEvents()
+            events =  self.pne.getEvents(blocking)
             
         for et in events:
             e = Event()
