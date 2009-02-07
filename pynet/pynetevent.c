@@ -463,10 +463,11 @@ PyNetEvent_send(PyNetEvent* self, PyObject *args, PyObject *kwds)
     bzero(buffer, 1500); 
 
     fd_set readfds; 
+    FD_ZERO(&readfds); 
     FD_SET(sock, &readfds); 
     struct timeval timeout; 
-    timeout.tv_sec = 1; 
-    timeout.tv_usec = 0; 
+    timeout.tv_sec = 0; 
+    timeout.tv_usec = 20000; 
     int retval = select(sock+1, &readfds, NULL, NULL,  &timeout); 
 
     if (retval == -1) { 
@@ -625,7 +626,7 @@ int setupRXSocket()
   int res = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 
 	     &optval, sizeof (optval)); 
 
-  optval = 4000000; 
+  optval = 1000000; 
   res = setsockopt (sock, SOL_SOCKET, SO_RCVBUF, 
 		    (const void *) &optval, sizeof(optval)); 
 
