@@ -75,7 +75,7 @@ class NetEventIO(object):
         events = None
         while events == None:
             events =  self.pne.getEvents(blocking)
-            if not blocking :
+            if events == None and not blocking :
                 return None
         for et in events:
             e = Event()
