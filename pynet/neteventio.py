@@ -76,7 +76,7 @@ class NetEventIO(object):
         while events == None:
             events =  self.pne.getEvents(blocking)
             if not blocking :
-                break
+                return None
         for et in events:
             e = Event()
             e.loadTuple(et)
