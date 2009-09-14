@@ -1,4 +1,4 @@
-import pynetevent
+from somapynet import pynetevent
 import time
 n = pynetevent.PyNetEvent()
 

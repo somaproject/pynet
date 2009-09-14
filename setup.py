@@ -8,4 +8,4 @@ setup(name="somapynet",
       version="1.0",
       package_dir = {'somapynet': 'pynet'},                      
       packages = ['somapynet'], 
-      ext_modules=[Extension("somapynet.pynetevent", ["pynet/pynetevent.c"])])
+      ext_modules=[Extension("somapynet.pynetevent", ["pynet/pynetevent.c", "pynet/netevent2.c"])])
