@@ -14,7 +14,7 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <time.h>
-#include "netevent2.h"
+#include <somanetevent/netevent.h>
 
 typedef struct {
   PyObject_HEAD
